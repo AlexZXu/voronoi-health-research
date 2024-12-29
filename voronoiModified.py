@@ -168,7 +168,7 @@ def recomputeScores(pop_points, upd_source_points):
         pop_reg[min_index] += pop_points[i, 1]
         #if out of range, the population holds double the weight
         if (min_dist > r*r):
-            # source_point_scores[min_index] += pop_points[i, 1]
+            source_point_scores[min_index] += pop_points[i, 1]
             pop_outside[min_index] += pop_points[i, 1]
 
 
@@ -329,7 +329,7 @@ with open('C:\\Alex Xu Files\\ghpmath\\research\\atlanta-health-clinics.csv', mo
 #defines the "source points"/positions of facilities
 source_points = np.array(source_arr, dtype='float64')
 
-r = 0.1
+r = 0.05
 c = 0.05
 omega = 0.2
 

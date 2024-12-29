@@ -150,6 +150,8 @@ def clusteringGenerateVectors(upd_source_points, source_point_pops, pop_sources)
     
     means = np.array(np.zeros((len(upd_source_points), 2)))
     
+    #calculate weighted mean based solely on population
+    
     for i in range(len(pop_list)):
         x = pop_list[i, 0]
         y = pop_list[i, 1]
