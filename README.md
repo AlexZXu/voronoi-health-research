@@ -95,10 +95,8 @@ ax.set_ylim(bounding_box[2], bounding_box[3])
 
 
 
+![output_11_1](https://github.com/user-attachments/assets/d87d9bda-fd74-49be-9326-a16bfb76d3d2)
 
-    
-![png](output_11_1.png)
-    
 
 
 We implement a function to compute the population in each cell. A population belongs to the cell of the closest source point (or as we'll also use interchangeably, facility).
@@ -200,8 +198,8 @@ fig
 ```
 
 
-    
-![png](output_16_0.png)
+![output_16_0](https://github.com/user-attachments/assets/3e4bae8f-c8aa-471b-a462-6c2acb877186)
+
     
 
 
