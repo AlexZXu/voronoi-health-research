@@ -309,16 +309,19 @@ def algorithmGenerateVectors(upd_source_points, source_point_pops):
     return apply_vectors
 
 
-#defines the bounding box
+# defines the bounding box
 bounding_box = np.array([33.6, 34., -84.6, -84.2]) #x_min, x_max, y_min, y_max
 
-df = pd.read_csv('C:\\Alex Xu Files\\ghpmath\\research\\atlanta-zip-coords.csv')
+# specific file path may be different
+df = pd.read_csv('C:\\Alex Xu Files\\ghpmath\\research\\data_sets\\atlanta-zip-coords.csv')
 ar = df.to_numpy(dtype="float64")
 
 source_arr = []
 source_names = []
 cnt = 0
-with open('C:\\Alex Xu Files\\ghpmath\\research\\atlanta-health-clinics.csv', mode='r') as file:
+
+# specific file path may be different
+with open('C:\\Alex Xu Files\\ghpmath\\research\\data_sets\\atlanta-health-clinics.csv', mode='r') as file:
     csvFile = csv.reader(file)
     next(csvFile, None)
     for lines in csvFile:
