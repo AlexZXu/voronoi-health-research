@@ -1,5 +1,46 @@
 # Optimizing Public Health Systems using Voronoi Diagrams and Unsupervised ML
 
+## Project Snapshots
+
+<p>
+  <img src="images/Screenshot%202026-06-21%20181842.png" alt="Voronoi Facility Optimizer webapp overview" width="32%">
+  <img src="images/Screenshot%202026-06-21%20182618.png" alt="Interactive optimization workspace" width="32%">
+  <img src="images/Screenshot%202026-06-21%20182650.png" alt="Optimization metrics and comparison view" width="32%">
+</p>
+
+<p>
+  <img src="images/voronoi_pop_points.png" alt="Population points used in Voronoi model" width="32%">
+  <img src="images/voronoi_draw_demo.png" alt="Voronoi drawing demonstration" width="32%">
+  <img src="images/voronoi_draw_final.png" alt="Final colored Voronoi diagram" width="32%">
+</p>
+
+## Interactive Flask MVP
+
+This repository now includes an interactive Flask webapp for exploring the research models in a browser.
+
+```console
+pip install -r requirements.txt
+python run.py
+```
+
+Then open `http://127.0.0.1:5000`.
+
+The MVP supports:
+
+- Loading the built-in Atlanta population and clinic sample.
+- Uploading custom population and facility CSV files.
+- Rendering population points, facility markers, and score-colored Voronoi regions on a Leaflet map.
+- Dragging facilities and recalculating the baseline.
+- Running weighted Lloyd/K-means optimization one step at a time or to convergence.
+- Inspecting score components, load metrics, and iteration history.
+- Exporting optimized facilities, facility metrics, and reproducible scenario JSON.
+
+Run the verification suite with:
+
+```console
+python -m pytest -q
+```
+
 ## Abstract
 
 This study explores the application of Voronoi diagrams in modeling and optimizing access to public health facilities. It starts with a basic model that maps population distribution across a geographic area using points and Voronoi cells, providing findings into facility load distribution and imbalances. To address the complexities of real-world scenarios, the research then introduces an improved scoring system that incorporates factors such as population density, patient decision-making, and health-related risks to create a more nuanced evaluation of facility performance and accessibility.

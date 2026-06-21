@@ -1,0 +1,356 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #17202a;
+  background: #f7f9fb;
+}
+
+a {
+  color: inherit;
+}
+
+.topbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: #ffffff;
+  border-bottom: 1px solid #dde5ec;
+}
+
+.brand {
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.button,
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border: 1px solid #b9c7d2;
+  background: #ffffff;
+  color: #17202a;
+  border-radius: 7px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button.primary,
+button.primary {
+  background: #1b6a5c;
+  border-color: #1b6a5c;
+  color: #ffffff;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.home {
+  max-width: 960px;
+  margin: 54px auto;
+  padding: 0 22px;
+}
+
+.home h1 {
+  font-size: 44px;
+  line-height: 1.05;
+  margin: 0 0 16px;
+}
+
+.home p {
+  max-width: 720px;
+  color: #4c5d6a;
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.actions form {
+  display: flex;
+  margin: 0;
+}
+
+.actions .button,
+.actions button {
+  min-width: 170px;
+}
+
+.workspace {
+  height: calc(100vh - 56px);
+  display: grid;
+  grid-template-columns: 320px minmax(360px, 1fr) 360px;
+}
+
+.panel {
+  overflow: auto;
+  background: #ffffff;
+  border-right: 1px solid #dde5ec;
+  padding: 16px;
+}
+
+.panel.right {
+  border-right: 0;
+  border-left: 1px solid #dde5ec;
+}
+
+.panel h2 {
+  margin: 4px 0 12px;
+  font-size: 19px;
+}
+
+.panel h3 {
+  margin: 22px 0 10px;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: #51616e;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #40505d;
+  margin-bottom: 5px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid #c8d2db;
+  border-radius: 7px;
+  padding: 8px 9px;
+}
+
+.upload-card {
+  border: 1px solid #dde5ec;
+  border-radius: 8px;
+  padding: 18px;
+  margin-top: 18px;
+  background: #ffffff;
+}
+
+.upload-card .field {
+  margin-bottom: 16px;
+}
+
+.upload-card .field label {
+  font-size: 15px;
+}
+
+.upload-card .field input {
+  min-height: 48px;
+  padding: 12px 13px;
+  font-size: 16px;
+}
+
+.field-help {
+  margin: 6px 0 0;
+  color: #5b6b78;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  background: #dce8ef;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.comparison-summary {
+  border: 1px solid #c8d2db;
+  border-radius: 8px;
+  background: #f7faf8;
+  color: #32434f;
+  padding: 10px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.comparison-card {
+  border: 1px solid #dde5ec;
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 10px;
+}
+
+.comparison-card h3 {
+  margin: 0 0 9px;
+  color: #40505d;
+  font-size: 13px;
+  text-transform: none;
+}
+
+.comparison-card dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.comparison-card dt {
+  color: #5b6b78;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.comparison-card dd {
+  margin: 2px 0 0;
+  color: #17202a;
+  font-size: 16px;
+  font-weight: 760;
+}
+
+.explain-panel {
+  border: 1px solid #dde5ec;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  margin-bottom: 18px;
+}
+
+.explain-panel h3 {
+  margin: 0 0 9px;
+  color: #40505d;
+  font-size: 13px;
+  text-transform: none;
+}
+
+.explain-panel h3:not(:first-child) {
+  margin-top: 16px;
+}
+
+.explain-panel dl {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+
+.explain-panel dt {
+  color: #17202a;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.explain-panel dd {
+  margin: 3px 0 0;
+  color: #4c5d6a;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.interpretation-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #3f505b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.interpretation-list li + li {
+  margin-top: 7px;
+}
+
+.metric {
+  border: 1px solid #dde5ec;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcfd;
+}
+
+.metric strong {
+  display: block;
+  font-size: 12px;
+  color: #5b6b78;
+}
+
+.metric span {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 760;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5ebf0;
+  padding: 7px 4px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.notice {
+  border: 1px solid #c8d2db;
+  border-radius: 8px;
+  background: #f7faf8;
+  padding: 11px;
+  color: #3f505b;
+  line-height: 1.45;
+}
+
+.leaflet-tooltip.facility-label {
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .workspace {
+    height: auto;
+    min-height: calc(100vh - 56px);
+    grid-template-columns: 1fr;
+  }
+
+  #map {
+    height: 62vh;
+  }
+
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}

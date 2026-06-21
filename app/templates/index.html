@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block body %}
+<main class="home">
+  <h1>Optimize facility placement against real population demand.</h1>
+  <p>
+    Explore Voronoi access regions, score imbalances, and run weighted Lloyd/K-means style
+    relocation over public-health facility data. Start with the Atlanta sample or upload
+    your own population and facility CSV files.
+  </p>
+
+  <div class="actions">
+    <form method="post" action="{{ url_for('main.sample') }}">
+      <button class="primary" type="submit">Use Atlanta sample</button>
+    </form>
+    <a class="button" href="#upload">Upload CSV data</a>
+  </div>
+
+  <section id="upload" class="upload-card">
+    <h2>Upload Data</h2>
+    <p class="notice">
+      Population CSV needs latitude, longitude, and population/demand columns.
+      Facility CSV needs latitude and longitude, with optional name, risk, capacity, and fixed columns.
+    </p>
+    <form id="upload-form">
+      <div class="field">
+        <label for="name">Scenario name</label>
+        <input id="name" name="name" value="Uploaded scenario">
+      </div>
+      <div class="field">
+        <label for="population">Population CSV</label>
+        <input id="population" name="population" type="file" accept=".csv" required>
+      </div>
+      <div class="field">
+        <label for="facilities">Facilities CSV</label>
+        <input id="facilities" name="facilities" type="file" accept=".csv" required>
+      </div>
+      <div class="field">
+        <label for="acceptable_radius">Acceptable radius</label>
+        <input id="acceptable_radius" name="acceptable_radius" type="number" step="0.001" value="0.05">
+        <p class="field-help">
+          The maximum distance a population point should be from its assigned facility before it is counted as underserved.
+        </p>
+      </div>
+      <button type="submit" class="primary">Create workspace</button>
+      <p id="upload-message"></p>
+    </form>
+  </section>
+</main>
+
+<script>
+const form = document.querySelector("#upload-form");
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.querySelector("#upload-message");
+  message.textContent = "Uploading and validating...";
+  const response = await fetch("/api/datasets/upload", {
+    method: "POST",
+    body: new FormData(form)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    message.textContent = data.error || "Upload failed.";
+    return;
+  }
+  window.location.href = data.workspace_url;
+});
+</script>
+{% endblock %}

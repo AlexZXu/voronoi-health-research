@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block body %}
+<main class="workspace" data-scenario-id="{{ scenario_id }}">
+  <aside class="panel">
+    <h2 id="scenario-name">Scenario</h2>
+    <p class="notice">
+      Distances use planar latitude/longitude units in this MVP. Use a projected coordinate system before production decisions.
+    </p>
+
+    <h3>Algorithm</h3>
+    <div class="field">
+      <label for="algorithm">Optimization method</label>
+      <select id="algorithm">
+        <option value="weighted_lloyd">Weighted Lloyd / K-means</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="max_iterations">Max iterations</label>
+      <input id="max_iterations" type="number" min="1" value="50">
+    </div>
+    <div class="field">
+      <label for="acceptable_radius">Acceptable radius</label>
+      <input id="acceptable_radius" type="number" step="0.001" value="0.05">
+    </div>
+    <div class="field">
+      <label for="fuzzy_radius">Fuzzy radius</label>
+      <input id="fuzzy_radius" type="number" step="0.001" value="0.05">
+    </div>
+    <div class="field">
+      <label for="omega">Fuzzy weight omega</label>
+      <input id="omega" type="number" step="0.01" value="0.2">
+    </div>
+    <div class="field">
+      <label for="learning_rate">Learning rate</label>
+      <input id="learning_rate" type="number" step="0.05" value="1">
+    </div>
+    <div class="button-row">
+      <button id="create-run" class="primary">Reset run</button>
+      <button id="step-run">Step</button>
+      <button id="converge-run">Run to convergence</button>
+    </div>
+
+    <h3>Exports</h3>
+    <div class="button-row">
+      <a id="export-facilities" class="button" href="#">Facilities CSV</a>
+      <a id="export-metrics" class="button" href="#">Metrics CSV</a>
+      <a id="export-report-csv" class="button" href="#">Report CSV</a>
+      <a id="export-report-pdf" class="button primary" href="#">Report PDF</a>
+      <a id="export-json" class="button" href="#">Scenario JSON</a>
+    </div>
+  </aside>
+
+  <section id="map" aria-label="Voronoi optimization map"></section>
+
+  <aside class="panel right">
+    <h2>Before vs. After Optimization</h2>
+    <div id="comparison-summary" class="comparison-summary">
+      Run the optimizer to compare baseline and optimized placement.
+    </div>
+    <div class="comparison-grid">
+      <section class="comparison-card">
+        <h3>Baseline Placement</h3>
+        <dl id="baseline-comparison"></dl>
+      </section>
+      <section class="comparison-card">
+        <h3>Optimized Placement</h3>
+        <dl id="optimized-comparison"></dl>
+      </section>
+    </div>
+
+    <h2>Explain Results</h2>
+    <section class="explain-panel" aria-live="polite">
+      <h3>Metric Guide</h3>
+      <dl id="metric-explanations"></dl>
+      <h3>Current Interpretation</h3>
+      <div id="scenario-interpretation"></div>
+    </section>
+
+    <h2>Metrics</h2>
+    <div id="metrics" class="metric-grid"></div>
+
+    <h3>Facility Scores</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Facility</th>
+          <th>Regular</th>
+          <th>Outside</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody id="facility-table"></tbody>
+    </table>
+
+    <h3>Iteration History</h3>
+    <canvas id="history-chart" height="160"></canvas>
+  </aside>
+</main>
+<script src="{{ url_for('static', filename='js/workspace.js') }}"></script>
+{% endblock %}

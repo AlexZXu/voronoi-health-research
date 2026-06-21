@@ -49,3 +49,5 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+WEBAPP_SPEC.md
+.flask-server.pid

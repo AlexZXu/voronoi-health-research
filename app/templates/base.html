@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Voronoi Facility Optimizer{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="{{ url_for('main.index') }}">Voronoi Facility Optimizer</a>
+      <span>Flask MVP</span>
+    </header>
+    {% block body %}{% endblock %}
+  </body>
+</html>
