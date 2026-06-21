@@ -8,12 +8,6 @@
   <img src="images/Screenshot%202026-06-21%20182650.png" alt="Optimization metrics and comparison view" width="32%">
 </p>
 
-<p>
-  <img src="images/voronoi_pop_points.png" alt="Population points used in Voronoi model" width="32%">
-  <img src="images/voronoi_draw_demo.png" alt="Voronoi drawing demonstration" width="32%">
-  <img src="images/voronoi_draw_final.png" alt="Final colored Voronoi diagram" width="32%">
-</p>
-
 ## Interactive Flask MVP
 
 This repository now includes an interactive Flask webapp for exploring the research models in a browser.
