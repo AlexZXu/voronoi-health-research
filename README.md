@@ -11,6 +11,8 @@
 ## Interactive Flask MVP
 
 This repository now includes an interactive Flask webapp for exploring the research models in a browser.
+The app wraps the original exploratory scripts in reusable Flask services and algorithm modules, with the browser
+workspace focused on scenario setup, map interaction, optimization runs, and exportable results.
 
 ```console
 pip install -r requirements.txt
@@ -23,11 +25,28 @@ The MVP supports:
 
 - Loading the built-in Atlanta population and clinic sample.
 - Uploading custom population and facility CSV files.
-- Rendering population points, facility markers, and score-colored Voronoi regions on a Leaflet map.
+- Rendering weighted population points, draggable facility markers, and score-colored Voronoi regions on a Leaflet map.
 - Dragging facilities and recalculating the baseline.
-- Running weighted Lloyd/K-means optimization one step at a time or to convergence.
+- Running weighted Lloyd/K-means optimization one step at a time or to convergence, while preserving any fixed facilities.
 - Inspecting score components, load metrics, and iteration history.
-- Exporting optimized facilities, facility metrics, and reproducible scenario JSON.
+- Exporting optimized facilities, facility metrics, scenario JSON, CSV summaries, and generated reports.
+
+The bundled sample data lives in `data_sets/`:
+
+- `atlanta-zip-coords.csv`: population demand points with ZIP code, population, latitude, and longitude.
+- `atlanta-health-clinics.csv`: existing facility points with clinic name, latitude, and longitude.
+
+Custom population CSVs should include latitude, longitude, and a demand column such as `population`, `pop`,
+`demand`, or `weight`. Optional columns include `id`, `name`, and `risk_weight`. Facility CSVs should include
+latitude and longitude, with optional `id`, `name`, `risk_factor`, `capacity`, and `fixed`/`locked` columns.
+The importer recognizes common aliases such as `lat`/`latitude`, `lon`/`lng`/`longitude`, and `zip`/`zipcode`.
+
+Key implementation areas:
+
+- `app/algorithms/`: pure Python assignment, scoring, geometry, Lloyd optimization, and metrics logic.
+- `app/services/`: CSV import, scenario serialization, run orchestration, persistence, and report generation.
+- `app/routes/`: Flask page routes and JSON API endpoints for scenarios, runs, stepping, convergence, and exports.
+- `app/static/js/workspace.js`: Leaflet workspace interactions, map rendering, run controls, and client-side state.
 
 Run the verification suite with:
 
