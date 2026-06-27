@@ -1,3 +1,6 @@
+import io
+
+
 def test_sample_scenario_api_flow(client):
     response = client.post("/sample", follow_redirects=False)
     assert response.status_code == 302
@@ -38,6 +41,16 @@ def test_workspace_contains_before_after_comparison(client):
     assert b"Current Interpretation" in workspace.data
 
 
+def test_workspace_map_interpretability_assets(client):
+    response = client.get("/static/js/workspace.js")
+
+    assert response.status_code == 200
+    assert b"Map Legend" in response.data
+    assert b"Overloaded facility" in response.data
+    assert b"Outside-radius demand" in response.data
+    assert b"Assigned population" in response.data
+
+
 def test_report_exports_after_optimization(client):
     response = client.post("/sample", follow_redirects=False)
     scenario_id = response.headers["Location"].rstrip("/").split("/")[-1]
@@ -58,3 +71,86 @@ def test_report_exports_after_optimization(client):
     assert pdf_response.status_code == 200
     assert pdf_response.mimetype == "application/pdf"
     assert pdf_response.data.startswith(b"%PDF")
+
+
+def test_dataset_preview_detects_columns(client):
+    response = client.post(
+        "/api/datasets/preview",
+        data={
+            "population": (io.BytesIO(b"Latitude,Longitude,Demand\n33.1,-84.1,100\n33.2,-84.2,200\n"), "population.csv"),
+            "facilities": (io.BytesIO(b"Name,Latitude,Longitude,Risk\nClinic A,33.1,-84.1,1.2\n"), "facilities.csv"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["valid"] is True
+    assert payload["population"]["detected_mapping"]["weight"] == "Demand"
+    assert payload["facilities"]["detected_mapping"]["name"] == "Name"
+    assert len(payload["population"]["preview"]) == 2
+
+
+def test_dataset_preview_lists_exact_missing_columns(client):
+    response = client.post(
+        "/api/datasets/preview",
+        data={
+            "population": (io.BytesIO(b"Latitude,Demand\n33.1,100\n"), "population.csv"),
+            "facilities": (io.BytesIO(b"Name,Latitude\nClinic A,33.1\n"), "facilities.csv"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["valid"] is False
+    assert "Population CSV is missing required column(s): longitude." in payload["errors"]
+    assert "Facility CSV is missing required column(s): longitude." in payload["errors"]
+
+
+def test_upload_requires_column_confirmation(client):
+    response = client.post(
+        "/api/datasets/upload",
+        data={
+            "population": (io.BytesIO(b"Latitude,Longitude,Population\n33.1,-84.1,100\n"), "population.csv"),
+            "facilities": (io.BytesIO(b"Name,Latitude,Longitude\nClinic A,33.1,-84.1\n"), "facilities.csv"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    assert "confirm the detected columns" in response.get_json()["error"]
+
+
+def test_upload_reports_missing_confirmed_mapping_column(client):
+    response = client.post(
+        "/api/datasets/upload",
+        data={
+            "columns_confirmed": "true",
+            "population_mapping": '{"lat":"Latitude","lon":"Missing longitude","weight":"Population"}',
+            "facilities_mapping": '{"lat":"Latitude","lon":"Longitude"}',
+            "population": (io.BytesIO(b"Latitude,Longitude,Population\n33.1,-84.1,100\n"), "population.csv"),
+            "facilities": (io.BytesIO(b"Name,Latitude,Longitude\nClinic A,33.1,-84.1\n"), "facilities.csv"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    assert "Missing column for longitude" in response.get_json()["error"]
+
+
+def test_upload_allows_blank_optional_numeric_columns(client):
+    response = client.post(
+        "/api/datasets/upload",
+        data={
+            "columns_confirmed": "true",
+            "population_mapping": '{"lat":"Latitude","lon":"Longitude","weight":"Population"}',
+            "facilities_mapping": '{"lat":"Latitude","lon":"Longitude","name":"Name","risk_factor":"Risk","capacity":"Capacity"}',
+            "population": (io.BytesIO(b"Latitude,Longitude,Population\n33.1,-84.1,100\n"), "population.csv"),
+            "facilities": (io.BytesIO(b"Name,Latitude,Longitude,Risk,Capacity\nClinic A,33.1,-84.1,,\n"), "facilities.csv"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["workspace_url"].startswith("/workspace/")

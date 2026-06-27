@@ -28,6 +28,30 @@ FACILITY_ALIASES = {
     "fixed": ["fixed", "locked"],
 }
 
+REQUIRED_LABELS = {
+    "population": {
+        "lat": "latitude",
+        "lon": "longitude",
+        "weight": "population or demand",
+    },
+    "facilities": {
+        "lat": "latitude",
+        "lon": "longitude",
+    },
+}
+
+FIELD_LABELS = {
+    "population": {
+        **REQUIRED_LABELS["population"],
+        "risk_weight": "risk weight",
+    },
+    "facilities": {
+        **REQUIRED_LABELS["facilities"],
+        "risk_factor": "risk",
+        "capacity": "capacity",
+    },
+}
+
 
 def guess_mapping(columns: list[str], dataset_type: str) -> dict[str, str]:
     aliases = POPULATION_ALIASES if dataset_type == "population" else FACILITY_ALIASES
@@ -41,11 +65,32 @@ def guess_mapping(columns: list[str], dataset_type: str) -> dict[str, str]:
     return mapping
 
 
+def preview_csv(file_or_path, dataset_type: str) -> dict[str, Any]:
+    df = pd.read_csv(file_or_path)
+    mapping = guess_mapping(list(df.columns), dataset_type)
+    missing = missing_required_columns(mapping, dataset_type)
+    return {
+        "columns": list(df.columns),
+        "detected_mapping": mapping,
+        "missing": missing,
+        "valid": len(missing) == 0,
+        "preview": df.head(5).fillna("").astype(str).to_dict(orient="records"),
+    }
+
+
+def missing_required_columns(mapping: dict[str, str], dataset_type: str) -> list[str]:
+    required = ["lat", "lon", "weight"] if dataset_type == "population" else ["lat", "lon"]
+    labels = REQUIRED_LABELS[dataset_type]
+    return [labels[key] for key in required if not mapping.get(key)]
+
+
 def read_population_csv(path: str | Path, mapping: dict[str, str] | None = None) -> PopulationData:
     df = pd.read_csv(path)
     mapping = mapping or guess_mapping(list(df.columns), "population")
     _require(mapping, ["lat", "lon", "weight"], "population")
-    errors = validate_numeric_columns(df, mapping, ["lat", "lon", "weight"])
+    errors = validate_numeric_columns(df, mapping, ["lat", "lon", "weight"], "population")
+    if mapping.get("risk_weight"):
+        errors.extend(validate_numeric_columns(df, mapping, ["risk_weight"], "population", allow_blank=True))
     if errors:
         raise ValueError("; ".join(errors[:5]))
 
@@ -69,7 +114,10 @@ def read_facilities_csv(path: str | Path, mapping: dict[str, str] | None = None)
     df = pd.read_csv(path)
     mapping = mapping or guess_mapping(list(df.columns), "facilities")
     _require(mapping, ["lat", "lon"], "facilities")
-    errors = validate_numeric_columns(df, mapping, ["lat", "lon"])
+    errors = validate_numeric_columns(df, mapping, ["lat", "lon"], "facilities")
+    optional_numeric = [key for key in ["risk_factor", "capacity"] if mapping.get(key)]
+    if optional_numeric:
+        errors.extend(validate_numeric_columns(df, mapping, optional_numeric, "facilities", allow_blank=True))
     if errors:
         raise ValueError("; ".join(errors[:5]))
 
@@ -89,15 +137,25 @@ def read_facilities_csv(path: str | Path, mapping: dict[str, str] | None = None)
     return facilities
 
 
-def validate_numeric_columns(df: pd.DataFrame, mapping: dict[str, str], keys: list[str]) -> list[str]:
+def validate_numeric_columns(
+    df: pd.DataFrame,
+    mapping: dict[str, str],
+    keys: list[str],
+    dataset_type: str,
+    allow_blank: bool = False,
+) -> list[str]:
     errors: list[str] = []
     for key in keys:
         column = mapping.get(key)
+        label = FIELD_LABELS[dataset_type].get(key, key)
         if not column or column not in df:
-            errors.append(f"Missing column for {key}")
+            errors.append(f"Missing column for {label}")
             continue
-        numeric = pd.to_numeric(df[column], errors="coerce")
-        bad_rows = numeric[numeric.isna()].index.tolist()
+        values = df[column]
+        numeric = pd.to_numeric(values, errors="coerce")
+        blank = values.isna() | values.astype(str).str.strip().eq("")
+        invalid = numeric.isna() & ~blank if allow_blank else numeric.isna()
+        bad_rows = invalid[invalid].index.tolist()
         if bad_rows:
             errors.append(f"{column} has non-numeric values at rows {', '.join(str(row + 2) for row in bad_rows[:5])}")
     return errors
@@ -125,7 +183,10 @@ def load_atlanta_sample(data_dir: Path) -> tuple[PopulationData, FacilityData, d
 def _require(mapping: dict[str, str], keys: list[str], dataset_type: str) -> None:
     missing = [key for key in keys if key not in mapping]
     if missing:
-        raise ValueError(f"{dataset_type} CSV is missing semantic columns: {', '.join(missing)}")
+        labels = REQUIRED_LABELS[dataset_type]
+        missing_labels = [labels.get(key, key) for key in missing]
+        dataset_label = "Population" if dataset_type == "population" else "Facility"
+        raise ValueError(f"{dataset_label} CSV is missing required column(s): {', '.join(missing_labels)}.")
 
 
 def _string_column(df: pd.DataFrame, column: str | None, prefix: str) -> list[str]:

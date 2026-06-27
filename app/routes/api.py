@@ -8,7 +8,7 @@ from pathlib import Path
 from flask import Blueprint, Response, current_app, jsonify, request
 from werkzeug.utils import secure_filename
 
-from app.services.data_import import compute_bounds, guess_mapping, read_facilities_csv, read_population_csv
+from app.services.data_import import compute_bounds, guess_mapping, preview_csv, read_facilities_csv, read_population_csv
 from app.services.scenario_service import (
     create_scenario_payload,
     scenario_response,
@@ -40,6 +40,8 @@ def upload_dataset_pair():
     facilities_file = request.files.get("facilities")
     if not population_file or not facilities_file:
         return jsonify({"error": "Upload both population and facility CSV files."}), 400
+    if request.form.get("columns_confirmed") != "true":
+        return jsonify({"error": "Please preview the CSV files and confirm the detected columns before creating a workspace."}), 400
 
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
     population_path = upload_dir / secure_filename(population_file.filename or "population.csv")
@@ -65,6 +67,35 @@ def upload_dataset_pair():
     )
     stored = _store().create_scenario(scenario)
     return jsonify({"scenario_id": stored["id"], "workspace_url": f"/workspace/{stored['id']}"})
+
+
+@api_bp.post("/datasets/preview")
+def preview_dataset_pair():
+    population_file = request.files.get("population")
+    facilities_file = request.files.get("facilities")
+    if not population_file or not facilities_file:
+        return jsonify({"error": "Upload both population and facility CSV files before previewing."}), 400
+
+    try:
+        population_preview = preview_csv(population_file, "population")
+        facilities_preview = preview_csv(facilities_file, "facilities")
+    except Exception as exc:
+        return jsonify({"error": f"Could not read one of the CSV files: {exc}"}), 400
+
+    errors = []
+    if population_preview["missing"]:
+        errors.append(f"Population CSV is missing required column(s): {', '.join(population_preview['missing'])}.")
+    if facilities_preview["missing"]:
+        errors.append(f"Facility CSV is missing required column(s): {', '.join(facilities_preview['missing'])}.")
+
+    return jsonify(
+        {
+            "population": population_preview,
+            "facilities": facilities_preview,
+            "valid": not errors,
+            "errors": errors,
+        }
+    )
 
 
 @api_bp.get("/scenarios")

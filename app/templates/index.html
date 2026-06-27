@@ -42,28 +42,201 @@
           The maximum distance a population point should be from its assigned facility before it is counted as underserved.
         </p>
       </div>
-      <button type="submit" class="primary">Create workspace</button>
+      <input id="population_mapping" name="population_mapping" type="hidden">
+      <input id="facilities_mapping" name="facilities_mapping" type="hidden">
+      <input id="columns_confirmed" name="columns_confirmed" type="hidden" value="false">
+      <div class="button-row">
+        <button id="preview-upload" type="button">Preview CSV files</button>
+        <button id="create-workspace" type="submit" class="primary" disabled>Create workspace</button>
+      </div>
       <p id="upload-message"></p>
+
+      <section id="upload-preview" class="upload-preview" hidden>
+        <h3>Confirm Detected Columns</h3>
+        <p class="field-help">
+          Review the first five rows and confirm that the selected columns match your files before optimization starts.
+        </p>
+        <div id="preview-errors" class="upload-errors" hidden></div>
+        <div class="preview-grid">
+          <div class="preview-panel">
+            <h4>Population CSV</h4>
+            <div id="population-mapping" class="mapping-grid"></div>
+            <div id="population-preview-table" class="preview-table"></div>
+          </div>
+          <div class="preview-panel">
+            <h4>Facility CSV</h4>
+            <div id="facilities-mapping" class="mapping-grid"></div>
+            <div id="facilities-preview-table" class="preview-table"></div>
+          </div>
+        </div>
+        <label class="confirm-row">
+          <input id="confirm-columns" type="checkbox">
+          The detected columns are correct.
+        </label>
+      </section>
     </form>
   </section>
 </main>
 
 <script>
 const form = document.querySelector("#upload-form");
+const previewButton = document.querySelector("#preview-upload");
+const createButton = document.querySelector("#create-workspace");
+const confirmColumns = document.querySelector("#confirm-columns");
+const uploadMessage = document.querySelector("#upload-message");
+const semanticFields = {
+  population: [
+    ["lat", "Latitude", true],
+    ["lon", "Longitude", true],
+    ["weight", "Population or demand", true],
+    ["id", "ID", false],
+    ["name", "Name", false],
+    ["risk_weight", "Risk weight", false]
+  ],
+  facilities: [
+    ["lat", "Latitude", true],
+    ["lon", "Longitude", true],
+    ["name", "Name", false],
+    ["risk_factor", "Risk", false],
+    ["capacity", "Capacity", false],
+    ["fixed", "Fixed", false]
+  ]
+};
+
+["population", "facilities"].forEach((id) => {
+  document.querySelector(`#${id}`).addEventListener("change", resetPreviewConfirmation);
+});
+
+previewButton.addEventListener("click", async () => {
+  uploadMessage.textContent = "Reading and validating CSV files...";
+  createButton.disabled = true;
+  confirmColumns.checked = false;
+  document.querySelector("#columns_confirmed").value = "false";
+
+  const response = await fetch("/api/datasets/preview", {
+    method: "POST",
+    body: new FormData(form)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    uploadMessage.textContent = data.error || "Preview failed.";
+    return;
+  }
+
+  renderPreview("population", data.population);
+  renderPreview("facilities", data.facilities);
+  renderPreviewErrors(data.errors || []);
+  document.querySelector("#upload-preview").hidden = false;
+  uploadMessage.textContent = data.valid
+    ? "Preview ready. Confirm the detected columns to continue."
+    : "Please fix the missing column selections before continuing.";
+  updateMappings();
+  updateCreateState();
+});
+
+confirmColumns.addEventListener("change", () => {
+  document.querySelector("#columns_confirmed").value = confirmColumns.checked ? "true" : "false";
+  updateCreateState();
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const message = document.querySelector("#upload-message");
-  message.textContent = "Uploading and validating...";
+  if (createButton.disabled) {
+    uploadMessage.textContent = "Preview the CSV files and confirm the detected columns first.";
+    return;
+  }
+  updateMappings();
+  uploadMessage.textContent = "Uploading and validating...";
   const response = await fetch("/api/datasets/upload", {
     method: "POST",
     body: new FormData(form)
   });
   const data = await response.json();
   if (!response.ok) {
-    message.textContent = data.error || "Upload failed.";
+    uploadMessage.textContent = data.error || "Upload failed.";
     return;
   }
   window.location.href = data.workspace_url;
 });
+
+function renderPreview(datasetType, data) {
+  document.querySelector(`#${datasetType}-mapping`).innerHTML = semanticFields[datasetType].map(([key, label, required]) => `
+    <label>
+      <span>${label}${required ? " *" : ""}</span>
+      <select data-dataset="${datasetType}" data-key="${key}">
+        ${columnOptions(data.columns, data.detected_mapping[key])}
+      </select>
+    </label>
+  `).join("");
+  document.querySelectorAll(`select[data-dataset="${datasetType}"]`).forEach((select) => {
+    select.addEventListener("change", () => {
+      updateMappings();
+      updateCreateState();
+    });
+  });
+  document.querySelector(`#${datasetType}-preview-table`).innerHTML = previewTable(data.columns, data.preview);
+}
+
+function resetPreviewConfirmation() {
+  createButton.disabled = true;
+  confirmColumns.checked = false;
+  document.querySelector("#columns_confirmed").value = "false";
+  document.querySelector("#upload-preview").hidden = true;
+  document.querySelector("#population_mapping").value = "";
+  document.querySelector("#facilities_mapping").value = "";
+}
+
+function columnOptions(columns, selected) {
+  const options = ['<option value="">Not used</option>'];
+  columns.forEach((column) => {
+    const isSelected = column === selected ? "selected" : "";
+    options.push(`<option value="${escapeHtml(column)}" ${isSelected}>${escapeHtml(column)}</option>`);
+  });
+  return options.join("");
+}
+
+function previewTable(columns, rows) {
+  return `
+    <table>
+      <thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead>
+      <tbody>
+        ${rows.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(row[column] ?? "")}</td>`).join("")}</tr>`).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderPreviewErrors(errors) {
+  const container = document.querySelector("#preview-errors");
+  container.hidden = errors.length === 0;
+  container.innerHTML = errors.map((error) => `<p>${escapeHtml(error)}</p>`).join("");
+}
+
+function updateMappings() {
+  ["population", "facilities"].forEach((datasetType) => {
+    const mapping = {};
+    document.querySelectorAll(`select[data-dataset="${datasetType}"]`).forEach((select) => {
+      if (select.value) mapping[select.dataset.key] = select.value;
+    });
+    document.querySelector(`#${datasetType}_mapping`).value = JSON.stringify(mapping);
+  });
+}
+
+function updateCreateState() {
+  const populationMapping = JSON.parse(document.querySelector("#population_mapping").value || "{}");
+  const facilitiesMapping = JSON.parse(document.querySelector("#facilities_mapping").value || "{}");
+  const hasPopulationRequired = Boolean(populationMapping.lat && populationMapping.lon && populationMapping.weight);
+  const hasFacilitiesRequired = Boolean(facilitiesMapping.lat && facilitiesMapping.lon);
+  createButton.disabled = !(confirmColumns.checked && hasPopulationRequired && hasFacilitiesRequired);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 </script>
 {% endblock %}

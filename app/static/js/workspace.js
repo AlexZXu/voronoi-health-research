@@ -5,6 +5,7 @@ let map;
 let populationLayer = L.layerGroup();
 let facilityLayer = L.layerGroup();
 let voronoiLayer = L.geoJSON(null);
+let mapLegend = null;
 let currentScenario = null;
 let currentRun = null;
 let chart = null;
@@ -61,7 +62,7 @@ async function loadScenario() {
   document.querySelector("#omega").value = currentScenario.parameters.omega ?? 0.2;
   initializeMap();
   renderPopulation(currentScenario.population);
-  renderFacilities(currentScenario.facilities);
+  renderFacilities(currentScenario.facilities, currentScenario.baseline.facility_scores, currentScenario.baseline.metrics);
   renderVoronoi(currentScenario.baseline.voronoi);
   renderMetrics(currentScenario.baseline.metrics);
   renderScores(currentScenario.baseline.facility_scores);
@@ -81,6 +82,7 @@ function initializeMap() {
   voronoiLayer.addTo(map);
   populationLayer.addTo(map);
   facilityLayer.addTo(map);
+  addMapLegend();
 }
 
 function renderPopulation(points) {
@@ -98,11 +100,26 @@ function renderPopulation(points) {
   });
 }
 
-function renderFacilities(facilities) {
+function renderFacilities(facilities, scores = [], metrics = {}) {
   facilityLayer.clearLayers();
+  const scoreById = Object.fromEntries(scores.map((row) => [row.facility_id, row]));
+  const meanLoad = Number(metrics.mean_load || 0);
+  const maxLoad = Math.max(...scores.map((row) => Number(row.regular_population || 0)), meanLoad, 1);
   facilities.forEach((facility) => {
-    const marker = L.marker([facility.lat, facility.lon], { draggable: true })
-      .bindTooltip(facility.name, { permanent: false, className: "facility-label" });
+    const score = scoreById[facility.id] || {
+      name: facility.name,
+      regular_population: 0,
+      outside_radius_population: 0,
+      score: 0
+    };
+    const marker = L.marker([facility.lat, facility.lon], {
+      draggable: true,
+      icon: facilityIcon(score, meanLoad, maxLoad)
+    }).bindTooltip(facilityTooltip(score, meanLoad), {
+      className: "facility-detail-tooltip",
+      direction: "top",
+      opacity: 0.96
+    });
     marker.on("dragend", async () => {
       const position = marker.getLatLng();
       facility.lat = position.lat;
@@ -113,6 +130,45 @@ function renderFacilities(facilities) {
   });
 }
 
+function facilityIcon(score, meanLoad, maxLoad) {
+  const assigned = Number(score.regular_population || 0);
+  const outside = Number(score.outside_radius_population || 0);
+  const overloaded = meanLoad > 0 && assigned >= meanLoad * 1.5;
+  const loadRatio = Math.max(0, assigned / maxLoad);
+  const size = Math.round(18 + 22 * Math.sqrt(loadRatio));
+  const background = overloaded ? "#8f1d16" : assigned > meanLoad ? "#b8462e" : "#1b6a5c";
+  const border = outside > 0 ? "#f2b84b" : "#ffffff";
+  const shadow = overloaded ? "0 0 0 5px rgba(214, 75, 58, 0.26)" : "0 2px 8px rgba(23, 32, 42, 0.28)";
+
+  return L.divIcon({
+    className: "facility-map-icon",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `
+      <span
+        class="facility-symbol ${overloaded ? "facility-symbol-overloaded" : ""}"
+        style="width:${size}px;height:${size}px;background:${background};border-color:${border};box-shadow:${shadow};"
+        aria-label="Facility marker"
+      ></span>
+    `
+  });
+}
+
+function facilityTooltip(score, meanLoad) {
+  const assigned = Number(score.regular_population || 0);
+  const outside = Number(score.outside_radius_population || 0);
+  const overloaded = meanLoad > 0 && assigned >= meanLoad * 1.5;
+  return `
+    <strong>${escapeHtml(score.name)}</strong>
+    <dl class="map-tooltip-metrics">
+      <div><dt>Assigned population</dt><dd>${formatNumber(assigned, 0)}</dd></div>
+      <div><dt>Outside-radius demand</dt><dd>${formatNumber(outside, 0)}</dd></div>
+      <div><dt>Score</dt><dd>${formatNumber(score.score, 0)}</dd></div>
+      <div><dt>Status</dt><dd>${overloaded ? "Overloaded: above 150% of mean load" : "Within high-load threshold"}</dd></div>
+    </dl>
+  `;
+}
+
 function renderVoronoi(geojson) {
   voronoiLayer.clearLayers();
   voronoiLayer = L.geoJSON(geojson, {
@@ -120,12 +176,31 @@ function renderVoronoi(geojson) {
       color: "#33434f",
       weight: 1,
       fillColor: feature.properties.color || "#dfe7ed",
-      fillOpacity: 0.36
+      fillOpacity: 0.42
     }),
     onEachFeature: (feature, layer) => {
       layer.bindTooltip(`${feature.properties.name}<br>Score: ${formatNumber(feature.properties.score || 0, 0)}`);
     }
   }).addTo(map);
+}
+
+function addMapLegend() {
+  if (mapLegend) return;
+  mapLegend = L.control({ position: "bottomright" });
+  mapLegend.onAdd = () => {
+    const div = L.DomUtil.create("div", "map-legend");
+    div.innerHTML = `
+      <h4>Map Legend</h4>
+      <div><span class="legend-symbol legend-facility"></span> Facility marker</div>
+      <div><span class="legend-symbol legend-population"></span> Population point</div>
+      <div><span class="legend-symbol legend-region"></span> Voronoi service region</div>
+      <div><span class="legend-symbol legend-overloaded"></span> Overloaded facility (&gt;150% mean load)</div>
+      <div><span class="legend-symbol legend-outside"></span> Outside-radius demand present</div>
+    `;
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  mapLegend.addTo(map);
 }
 
 async function saveFacilityPositions() {
@@ -135,6 +210,7 @@ async function saveFacilityPositions() {
   });
   currentScenario = data;
   renderVoronoi(data.baseline.voronoi);
+  renderFacilities(data.facilities, data.baseline.facility_scores, data.baseline.metrics);
   renderMetrics(data.baseline.metrics);
   renderScores(data.baseline.facility_scores);
   renderComparison(data.baseline.metrics, data.baseline.metrics, false);
@@ -281,7 +357,7 @@ function applyRun(run) {
     fixed: latest.facilities.fixed[index]
   }));
   currentScenario.facilities = facilities;
-  renderFacilities(facilities);
+  renderFacilities(facilities, latest.facility_scores, latest.metrics);
   renderVoronoi(run.voronoi);
   renderMetrics(latest.metrics);
   renderScores(latest.facility_scores);
@@ -337,6 +413,15 @@ async function convergeRun() {
     body: JSON.stringify({ max_steps: Number(document.querySelector("#max_iterations").value) })
   });
   applyRun(data);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 document.querySelector("#create-run").addEventListener("click", createRun);
